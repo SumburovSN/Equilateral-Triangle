@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Equilateral Triangle</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        * {
+            font-size: 12px;
+            box-sizing: border-box;
+	    }
+
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="https://threejs.org/build/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+
+  </head>
+  <body>
+    <div id="container"></div>
+    <button id="move" type="button" class="btn btn-primary btn-md" onclick="move()">Move(m)</button>
+    <button id="scale" type="button" class="btn btn-primary btn-md" onclick="scale()">Scale(s)</button>
+    <button id="parallel" type="button" class="btn btn-primary btn-md" onclick="parallel()">Parallel to line(p)</button>
+    <button id="rotate" type="button" class="btn btn-primary btn-md" onclick="rotate()">Rotate(r)</button>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-4">
+                <h6>Line points coordinates</h6>
+                <table class="table table-dark table-hover">
+                    <tr>
+                        <th></th>
+                        <th>X</th>
+                        <th>Y</th>
+                        <th>Z</th>
+                    </tr>
+                    <tr>
+                        <td>Point 1</td>
+                        <td><input id="px1" type="number" step="0.1" min="-5" max="5" class="form-control"></td>
+                        <td><input id="py1" type="number" step="0.1" min="-5" max="5" class="form-control"></td>
+                        <td><input id="pz1" type="number" step="0.1" min="-5" max="5" class="form-control"></td>
+                    </tr>
+                    <tr>
+                        <td>Point 2</td>
+                        <td><input id="px2" type="number" step="0.1" min="-5" max="5" class="form-control"></td>
+                        <td><input id="py2" type="number" step="0.1" min="-5" max="5" class="form-control"></td>
+                        <td><input id="pz2" type="number" step="0.1" min="-5" max="5" class="form-control"></td>
+                    </tr>                    
+                </table>
+                <button type="button" class="btn btn-primary btn-md" onclick="redraw()">Redraw</button>
+            </div>
+            <div class="col-sm-4">
+                <h6>Triangle vertices coordinates</h6>
+                <table class="table table-dark table-hover">
+                    <tr>
+                        <th></th>
+                        <th>X</th>
+                        <th>Y</th>
+                        <th>Z</th>
+                    </tr>
+                    <tr>
+                        <td>Vertex Green</td>
+                        <td id="x1"></td>
+                        <td id="y1"></td>
+                        <td id="z1"></td>
+                    </tr>
+                    <tr>
+                        <td>Vertex Blue</td>
+                        <td id="x2"></td>
+                        <td id="y2"></td>
+                        <td id="z2"></td>
+                    </tr>
+                    <tr>
+                        <td>Vertex Red</td>
+                        <td id="x3"></td>
+                        <td id="y3"></td>
+                        <td id="z3"></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-sm-4">
+                    <h6>Triangle transformation matrix</h6>
+                    <table id="matrix" class="table table-dark table-hover">                        
+                    </table>                
+            </div>
+            <div id="info" class="col-sm-4">
+
+            </div>
+        </div>
+    </div>
+
+  
+    <script>
+        // set the scene size
+        var WIDTH = 600, HEIGHT = 600;
+      
+        // set some camera attributes
+        var VIEW_ANGLE = 45, ASPECT = WIDTH / HEIGHT, NEAR = 1, FAR = 1000;
+        
+        // get the DOM element to attach to
+        var container = $('#container');
+        
+        // create a WebGL renderer, camera, and a scene
+        var renderer = new THREE.WebGLRenderer();
+        var scene = new THREE.Scene();
+        // var clock = new THREE.Clock();
+        var camera = new THREE.PerspectiveCamera(VIEW_ANGLE,ASPECT,NEAR,FAR);
+                
+        // the camera starts at 0,0,0 so pull it back for some assignments you may need to adjust this value
+        // some distance to make the scene visible properly
+        camera.position.z = 1;
+        
+        // add the camera to the scene
+        scene.add(camera);
+        
+        // set up the camera controls.  Please keep in mind that what this does is move the entire scene around.
+        // because the entire scene is moving the position of the camera and lights in relation to objects within 
+        // the scene doesn't change so the lighting on the surface of the object(s) will not change either
+        var cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+        cameraControls.addEventListener( 'mousemove', renderer );
+        
+        // start the renderer
+        renderer.setSize(WIDTH, HEIGHT);
+        
+        // attach the render-supplied DOM element
+        container.append(renderer.domElement);
+        
+        // set the background color for the scene and antialising
+        renderer.setClearColor( "white");
+        renderer.antialias = true;
+
+        // ----------------------------------------------------------------------------------------
+        //  END OF THE STANDARD CODE FOR THE ASSIGNMENT
+        //  Following this is where you must place your own custom code to complete the assignment
+        // ----------------------------------------------------------------------------------------
+
+        camera.position.set(-2, 1, 14);
+        
+        // Create a light that will shine a light thus casting a shadow
+        scene.add(new THREE.AmbientLight(0x333333));
+        var light = new THREE.DirectionalLight(0xffffff, 3);
+        light.position.set(-10, 20, 30);
+        scene.add(light);
+
+        // Constructing the back plane
+        var size = 10;
+        var divisions = 10;
+
+        var gridHelperX = new THREE.GridHelper( size, divisions );
+        var gridHelperY = new THREE.GridHelper( size, divisions );
+        gridHelperY.rotateX(Math.PI/2);
+        scene.add( gridHelperY, gridHelperX );
+
+        // Constructing the 3 Axis helper
+        var xAxis = new THREE.Vector3( 1, 0, 0 );
+        var yAxis = new THREE.Vector3( 0, 1, 0 );
+        var zAxis = new THREE.Vector3( 0, 0, 1 );
+        
+        var origin = new THREE.Vector3( 0, 0, 0 );
+        var length = 5;
+        
+        var xHelper = new THREE.ArrowHelper( xAxis, origin, length, 0xff0000 );
+        var yHelper = new THREE.ArrowHelper( yAxis, origin, length, 0x0000ff );
+        var zHelper = new THREE.ArrowHelper( zAxis, origin, length, 0x00ff00 );
+        scene.add( xHelper, yHelper, zHelper );
+        
+        // build objects
+        drawTriangle();
+        lineCoordinates();
+        drawLine();
+        getCoordinates();
+
+        // global variables
+        var triangleGeometry, triangle, line;        
+        
+        function drawTriangle(){
+            triangleGeometry = new THREE.Geometry();
+            // fill in vertices array
+            triangleGeometry.vertices.push( new THREE.Vector3(0, 0, 0) );
+            triangleGeometry.colors.push(  new THREE.Color(0x00ff00) );
+            
+            triangleGeometry.vertices.push( new THREE.Vector3(1, 0, 0) );
+            triangleGeometry.colors.push(  new THREE.Color(0x0000ff) );
+            
+            triangleGeometry.vertices.push( new THREE.Vector3(.5, Math.sqrt(3)/2, 0) );
+            triangleGeometry.colors.push(  new THREE.Color(0xff0000) );
+            
+            // fill in faces array
+            triangleGeometry.faces.push( new THREE.Face3( 0, 1, 2 ) );
+
+            // let's color of faces vertex be tha same as color array
+            triangleGeometry.faces[0].vertexColors[0] = triangleGeometry.colors[triangleGeometry.faces[0].a];
+            triangleGeometry.faces[0].vertexColors[1] = triangleGeometry.colors[triangleGeometry.faces[0].b];
+            triangleGeometry.faces[0].vertexColors[2] = triangleGeometry.colors[triangleGeometry.faces[0].c];
+            
+            // to use with Phong materials
+            triangleGeometry.computeFaceNormals();
+           
+            var triangleMaterial = new THREE.MeshBasicMaterial({
+                    vertexColors: THREE.VertexColors,
+                    side: THREE.DoubleSide
+            });
+
+            triangle = new THREE.Mesh( triangleGeometry, triangleMaterial );
+
+            scene.add( triangle );
+        }
+
+        // to initialze random variables from -5 to 5 at 1st run
+        function lineCoordinates(){
+            $("#px1").val(assign());
+            $("#py1").val(assign());
+            $("#pz1").val(assign());
+            $("#px2").val(assign());
+            $("#py2").val(assign());
+            $("#pz2").val(assign());
+
+            function assign() {return (Math.random()*10-5).toFixed(1);}
+        }        
+               
+        function drawLine() {
+            var x1, y1, z1, x2, y2, z2;
+            x1 = $("#px1").val();
+            y1 = $("#py1").val();
+            z1 = $("#pz1").val();
+            x2 = $("#px2").val();
+            y2 = $("#py2").val();
+            z2 = $("#pz2").val();
+        
+            var lineGeometry = new THREE.Geometry();
+            // fill in vertices array
+            lineGeometry.vertices.push( new THREE.Vector3(x1, y1, z1) );
+            lineGeometry.vertices.push( new THREE.Vector3(x2, y2, z2) );
+
+            var lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x0000ff
+            });
+
+            line = new THREE.Line( lineGeometry, lineMaterial );
+            scene.add( line );
+        }
+
+        function getCoordinates(){
+            
+            triangle.updateMatrixWorld();
+            
+            var vertex1 = new THREE.Vector3(0, 0, 0).applyMatrix4(triangle.matrixWorld);
+            var vertex2 = new THREE.Vector3(1, 0, 0).applyMatrix4(triangle.matrixWorld);
+            var vertex3 = new THREE.Vector3(.5, Math.sqrt(3)/2, 0).applyMatrix4(triangle.matrixWorld);
+
+            var vertex1x = vertex1.x, vertex1y = vertex1.y, vertex1z = vertex1.z;
+            var vertex2x = vertex2.x, vertex2y = vertex2.y, vertex2z = vertex2.z;
+            var vertex3x = vertex3.x, vertex3y = vertex3.y, vertex3z = vertex3.z;
+
+            $("#x1").text(vertex1x.toFixed(1));
+            $("#y1").text(vertex1y.toFixed(1));
+            $("#z1").text(vertex1z.toFixed(1));
+            
+            $("#x2").text(vertex2x.toFixed(1));
+            $("#y2").text(vertex2y.toFixed(1));
+            $("#z2").text(vertex2z.toFixed(1));
+            
+            $("#x3").text(vertex3x.toFixed(1));
+            $("#y3").text(vertex3y.toFixed(1));
+            $("#z3").text(vertex3z.toFixed(1));
+
+            var size = Math.sqrt((vertex2x-vertex1x)**2 + (vertex2y-vertex1y)**2 + (vertex2z-vertex1z)**2);
+            $("#info").html("Line size: " + size);
+
+            triangleMatrix();
+        }
+        
+        function triangleMatrix() {
+            var data = triangle.matrixWorld.elements;
+            var txt ="";
+            
+            for (var row=0; row<4; row++) {
+                txt += "<tr>";
+                for (var column=0; column<4; column++) {
+                    txt += "<td>" + data[row*4+column].toFixed(1) + "</td>";
+                };
+                txt += "</tr>";            
+            }
+            $("#matrix").html(txt);
+        }
+
+        document.addEventListener('keydown', function(event) {
+            var keyDown = event.key;            
+                        
+            switch(keyDown) {
+            case "t":
+                triangleTransformation();
+                break;            
+            case "m":
+                move();
+                break;            
+            case "p":
+                parallel();
+                break;
+            case "s":
+                scale();
+            case "r":
+                rotate();
+                break;
+            }
+        }, false);
+
+        function move() {
+            // combine origins of triangle and line
+            // origin is the 1st vector in geometry.vertices array
+            triangle.position.set($("#px1").val(), $("#py1").val(), $("#pz1").val());
+
+            getCoordinates();
+            $("#move").attr("disabled", true);
+        }
+
+        function scale() {
+            var dx = $("#px2").val()-$("#px1").val();
+            var dy = $("#py2").val()-$("#py1").val();
+            var dz = $("#pz2").val()-$("#pz1").val();
+            
+            var distance = Math.sqrt(dx**2 + dy**2 + dz**2);
+
+            // scale coeficient = distance because tringle edge size = 1
+            triangle.scale.set(distance, distance, distance);
+
+            getCoordinates();
+            $("#scale").attr("disabled", true);
+        }
+
+        function parallel() {
+            var dx = $("#px2").val()-$("#px1").val();
+            var dy = $("#py2").val()-$("#py1").val();
+            var dz = $("#pz2").val()-$("#pz1").val();
+
+            // Find the angle between line and triangle bottom edge
+            var lineVector = new THREE.Vector3(dx, dy, dz);
+            var triangleVector = new THREE.Vector3(1, 0, 0);
+        
+            // Note: the sequence of vectors of angleTo function
+            var angle = lineVector.angleTo(triangleVector);
+        
+            // Find vector to turn the triangle around it on the "angle"
+            // It's a normal to the plane: line - triangle bottom edge
+            // Note: the sequence of vectors in crossVectors function
+            // It depends on angleTo function sequence
+            var rotateVector = new THREE.Vector3().crossVectors(triangleVector, lineVector).normalize();
+
+            triangle.rotateOnWorldAxis(rotateVector, angle);
+            getCoordinates();
+            $("#parallel").attr("disabled", true);
+        }
+
+        function rotate() {
+            triangle.rotateX(Math.PI/60);
+            getCoordinates();            
+        }
+
+        function triangleTransformation() {
+            //move
+            move();
+            //scale
+            scale();
+            //set parallel
+            parallel();
+        }
+
+        function redraw() {
+            $("#info").html("Redraw");
+            scene.remove(triangle, line);
+            drawTriangle();
+            drawLine();
+            $("#move").attr("disabled", false);
+            $("#scale").attr("disabled", false);
+            $("#parallel").attr("disabled", false);
+            getCoordinates();
+            
+        }
+
+        
+        // ----------------------------------------------------------------------------------------
+        // END OF YOUR CUSTOM CODE FOR THE ASSIGNMENT
+        // The rendering functions that follow are standard and can be used for this assignment.  
+        // You are welcome to customize them or create your own if you desire, however, you can 
+        // simply use the code provided.
+        //
+
+        // Standard functions for rendering the scene.  Notice how we have the animate function 
+        // which submits a call to requestAnimationFrame to call animate.   This creates a loop
+        // that will render the scene again whenever something within the scene changes.
+
+        
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            render();      
+        }
+
+        function render() {
+        
+            cameraControls.update();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+      
+    </script>
+
+  </body>
+</html>
